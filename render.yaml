@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: khaya-disponibilidad
+    runtime: python
+    buildCommand: chmod +x build.sh && ./build.sh
+    startCommand: cd backend && uvicorn server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      # Opcional: ID de la hoja (del enlace de Google Sheets). Por defecto usa el del código.
+      - key: SPREADSHEET_ID
+        sync: false
+      # JSON de cuenta de servicio (Google Cloud IAM). Comparte la hoja con el email de esa cuenta (Editor).
+      # Sin esto, la app puede leer el export pero no guardar cambios de estado desde la interfaz.
+      - key: GOOGLE_CREDENTIALS_JSON
+        sync: false
+      # Opcional: URL completa .../edit (solo informativa / mensajes de error)
+      - key: GOOGLE_SHEETS_EDITOR_URL
+        sync: false
+      # Coincide con .python-version (Render prioriza PYTHON_VERSION en dashboard sobre el archivo)
+      - key: PYTHON_VERSION
+        value: "3.11.11"
+      - key: NODE_VERSION
+        value: "20.18.1"

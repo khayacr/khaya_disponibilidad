@@ -1,0 +1,16 @@
+# Solo dependencias usadas por backend/server.py (API Khaya + sync Sheets).
+# El requirements.txt anterior mezclaba docenas de paquetes y causaba ResolutionImpossible.
+#
+# Python: usa 3.11.x o 3.12 (ver .python-version en la raíz del repo). En Render va PYTHON_VERSION=3.11.
+# Con Python 3.14 en local, pydantic puede intentar compilar pydantic-core y fallar (sin wheel aún).
+
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+python-dotenv==1.0.1
+pydantic==2.10.4
+email-validator==2.2.0
+httpx==0.28.1
+requests>=2.31.0
+openpyxl==3.1.5
+gspread==6.1.4
+google-auth==2.37.0

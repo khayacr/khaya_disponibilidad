@@ -1,0 +1,85 @@
+{
+  "theme": "dark",
+  "archetype": "5 (Jewel & Luxury)",
+  "typography": {
+    "fonts": {
+      "headings": "Cormorant Garamond, serif",
+      "body": "Outfit, sans-serif"
+    },
+    "scales": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tighter font-light",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight font-light",
+      "h3": "text-xl sm:text-2xl font-light",
+      "body": "text-base leading-relaxed text-gray-300",
+      "labels": "text-xs tracking-[0.2em] uppercase text-gray-400 font-semibold"
+    },
+    "installation": "Import Google fonts 'Cormorant Garamond' and 'Outfit' in index.css or index.html."
+  },
+  "colors": {
+    "background": "#050505",
+    "surface": "#121212",
+    "border": "rgba(255,255,255,0.1)",
+    "primary": "#e08433",
+    "primaryHover": "#644939",
+    "text": {
+      "main": "#f8fafc",
+      "muted": "#94a3b8"
+    },
+    "availability": {
+      "disponible": "#10b981",
+      "reservado": "#e08433",
+      "vendido": "#e11d48",
+      "bloqueado": "#64748b"
+    }
+  },
+  "layout": {
+    "spacing": "p-8 md:p-12 lg:p-24",
+    "grid": "grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12",
+    "hero": "relative min-h-[90vh] flex items-center justify-center overflow-hidden",
+    "interactive_section": {
+      "container": "w-full min-h-screen flex flex-col lg:flex-row",
+      "building_viewer": "lg:w-[40%] relative h-[50vh] lg:h-screen sticky top-0 bg-[#050505]",
+      "floor_plan": "lg:w-[60%] relative bg-[#0a0a0a] p-4 lg:p-12 flex flex-col"
+    },
+    "surfaces": {
+      "glass": "backdrop-blur-xl bg-black/60 border border-white/10 shadow-2xl",
+      "card": "bg-[#121212] border border-white/5 shadow-lg rounded-none"
+    }
+  },
+  "motion": {
+    "hover": "transition-all duration-300 ease-in-out",
+    "click": "active:scale-95",
+    "entrance": "fade-in slide-in-from-bottom-4 duration-700"
+  },
+  "components": {
+    "Navigation": "Fixed top navigation. Glassmorphism backdrop-blur-md bg-black/40. Left: Brand Name (KHAYA). Right: Contact CTA.",
+    "Hero": "Full width image 'facade_img' with bg-gradient-to-t from-[#050505] via-black/40 to-black/60. Cinematic central typography.",
+    "BuildingExplorer": "Left pane showing 'facade_img'. Use an absolute positioned SVG overlay covering the 14 floors. Hovering a floor polygon changes its fill to white/20. Clicking selects the floor.",
+    "FloorPlanExplorer": "Right pane. Shows 'floor_plan_typical' (or ground floor) as background. A CSS grid or SVG overlay delineates 10 apartments. The units are color-coded based on availability status (disponible, reservado, etc.) with 40% opacity, 70% on hover.",
+    "FiltersAndLegend": "A floating glass panel or top bar above the floor plan. Includes Shadcn Select for filtering by price, view, and availability. Includes a legend of small colored circles corresponding to status.",
+    "UnitModal": "Shadcn Dialog or right-side slide-over sheet. Triggered by clicking a unit. Displays unit details (Price, M2, Beds, Baths), a small thumbnail of the floor plan highlighting the unit, and a 'Request Info' CTA.",
+    "ContactForm": "Premium footer or dedicated section. Shadcn form components with custom dark theme (bg-transparent, border-b only, focus:border-primary)."
+  },
+  "accessibility": {
+    "contrast": "Ensure white text over images is legible (use drop-shadow or dark overlays).",
+    "focus": "focus-visible:ring-2 focus-visible:ring-[#d4af37] focus-visible:outline-none focus-visible:ring-offset-0 focus-visible:ring-offset-black",
+    "testing": "MANDATORY: Use `data-testid` on all buttons, floors (e.g., data-testid='floor-5'), units (e.g., data-testid='unit-502'), select dropdowns, and form elements."
+  },
+  "media": {
+    "facade_img": "https://customer-assets.emergentagent.com/job_3f5022b9-cf53-4fd1-b58d-ff07a94ca1e2/artifacts/bcdp6152_KRU-TorreE-Fachada-001.png",
+    "floor_plan_typical": "https://customer-assets.emergentagent.com/job_3f5022b9-cf53-4fd1-b58d-ff07a94ca1e2/artifacts/36kqe1wg_Planta_tipo_ruta_uno_1.png",
+    "floor_plan_ground": "https://customer-assets.emergentagent.com/job_3f5022b9-cf53-4fd1-b58d-ff07a94ca1e2/artifacts/w9l5xoek_Planta_baja_ruta_uno_1.png"
+  },
+  "instructions_to_main_agent": [
+    "You are building a premium React (Vite + Tailwind) single-page interactive application.",
+    "Read the assets from 'media' and use them exactly.",
+    "The application should have a dark, cinematic 'Jewel & Luxury' feel. Strictly follow the color palette.",
+    "Create a complex interactive UI: Use SVG overlays or relative/absolute positioned divs over the facade image to make 14 clickable floor sections.",
+    "When a floor is selected, the right pane should update to show that floor's plan with 10 interactive apartment units.",
+    "Mock a data array containing 14 floors * 10 units = 140 units. Assign random statuses (disponible, reservado, vendido, bloqueado) and mock prices/specs.",
+    "Implement Shadcn UI for dropdowns, sliders, forms, and dialogs. Style them to remove the 'default light Vercel' look (use dark backgrounds, thin borders).",
+    "Ensure `data-testid` attributes are heavily utilized across interactive elements for testing purposes.",
+    "No generic placehold.it images. Use the provided assets.",
+    "Use lucide-react for all iconography."
+  ]
+}
