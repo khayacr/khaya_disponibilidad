@@ -1,26 +1,7 @@
 import { useState } from 'react';
 import { Maximize2 } from 'lucide-react';
 import { matchesUnitFilters } from '@/utils/unitFilters';
-
-const FLOOR_PLAN_TYPICAL = `${process.env.PUBLIC_URL || ''}/planta-tipo.png`;
-const FLOOR_PLAN_GROUND = `${process.env.PUBLIC_URL || ''}/planta-baja.png`;
-
-// Unit positions on the floor plan (relative percentages of the image box)
-// Calibrated to /planta-tipo.png (1024×631)
-const UNIT_POSITIONS = {
-  // Top row (8–2)
-  8:  { top: '18.88%', left: '13.28%', width: '13.67%', height: '21.23%' },
-  9:  { top: '28.38%', left: '27.83%', width: '13.48%', height: '21.87%' },
-  10: { top: '18.72%', left: '42.29%', width: '13.67%', height: '21.56%' },
-  1:  { top: '28.55%', left: '57.03%', width: '13.48%', height: '21.71%' },
-  2:  { top: '18.88%', left: '71.39%', width: '13.67%', height: '21.23%' },
-  // Bottom row (7–3)
-  7:  { top: '58.30%', left: '13.28%', width: '13.67%', height: '21.56%' },
-  6:  { top: '52.28%', left: '27.83%', width: '13.48%', height: '21.87%' },
-  5:  { top: '58.30%', left: '42.29%', width: '13.67%', height: '21.56%' },
-  4:  { top: '52.43%', left: '57.03%', width: '13.48%', height: '21.71%' },
-  3:  { top: '58.30%', left: '71.39%', width: '13.67%', height: '21.56%' },
-};
+import { getFloorPlanImageUrl, UNIT_POSITIONS } from '@/utils/floorPlanLayout';
 
 const STATUS_COLORS = {
   Disponible: 'rgba(16, 185, 129, 0.5)',
@@ -39,7 +20,7 @@ const STATUS_HOVER_COLORS = {
 export const FloorPlan = ({ selectedFloor, selectedTower, onUnitClick, filters, units = [] }) => {
   const [hoveredUnit, setHoveredUnit] = useState(null);
   
-  const floorPlanImage = selectedFloor === 1 ? FLOOR_PLAN_GROUND : FLOOR_PLAN_TYPICAL;
+  const floorPlanImage = getFloorPlanImageUrl(selectedFloor);
 
   const filteredUnits = units.filter((unit) => matchesUnitFilters(unit, filters));
 

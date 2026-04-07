@@ -7,6 +7,13 @@ import {
   PLAZO_ANOS_FINANCIAMIENTO,
 } from './bankFinancing';
 import { PDF, PDF_COPY, PDF_LINE } from './khayaPdfTheme';
+import {
+  FLOOR_PLAN_ASPECT_RATIO,
+  UNIT_POSITIONS,
+  getDetailPlanImageCandidates,
+  getFloorPlanImageFilename,
+  parseFloorPlanPercent,
+} from './floorPlanLayout';
 
 function formatPrice(value) {
   return new Intl.NumberFormat('en-US', {
@@ -143,12 +150,12 @@ export async function generateReservationPDF(unit, salesPlan) {
     if (!logoData) throw new Error('no logo');
     const logoMaxW = 48;
     const logoMaxH = 24;
-    const imgProps = doc.getImageProperties(logoData);
-    const logoFmt = imgProps.fileType?.toUpperCase() === 'JPEG' ? 'JPEG' : 'PNG';
+    const logoPrepared = await preparePdfImageData(doc, logoData);
+    const imgProps = logoPrepared.props;
     const ratio = Math.min(logoMaxW / imgProps.width, logoMaxH / imgProps.height);
     const logoW = imgProps.width * ratio;
     const logoH = imgProps.height * ratio;
-    doc.addImage(logoData, logoFmt, (pageW - logoW) / 2, y, logoW, logoH);
+    doc.addImage(logoPrepared.dataUrl, logoPrepared.format, (pageW - logoW) / 2, y, logoW, logoH);
     y += logoH + 5;
   } catch {
     doc.setFont('helvetica', 'bold');
@@ -213,6 +220,116 @@ export async function generateReservationPDF(unit, salesPlan) {
     ry += 4.2;
   });
   y += resumenH + 8;
+
+  // ── Planta: prioridad a `public/plantas-detalle/` (plano detallado); si no, planta piso + recuadro ──
+  const contentW = pageW - margin * 2;
+  const maxPlanHDetail = 88;
+  const maxPlanHFallback = 72;
+
+  const detailCandidates = getDetailPlanImageCandidates(unit);
+  const detailLoaded = await fetchFirstImageFromCandidates(detailCandidates);
+
+  let detailPrepared = null;
+  if (detailLoaded) {
+    try {
+      detailPrepared = await preparePdfImageData(doc, detailLoaded.data);
+    } catch {
+      detailPrepared = null;
+    }
+  }
+
+  let planImgW;
+  let planImgH;
+  if (detailPrepared) {
+    const ip = detailPrepared.props;
+    const fitted = fitImageToMaxBox(ip.width, ip.height, contentW, maxPlanHDetail);
+    planImgW = fitted.imgW;
+    planImgH = fitted.imgH;
+  } else {
+    planImgW = contentW;
+    planImgH = planImgW / FLOOR_PLAN_ASPECT_RATIO;
+    if (planImgH > maxPlanHFallback) {
+      planImgH = maxPlanHFallback;
+      planImgW = planImgH * FLOOR_PLAN_ASPECT_RATIO;
+    }
+  }
+
+  const planSectionH = 4 + planImgH + 14;
+  if (y + planSectionH > pageH - TABLE_MARGIN_BOTTOM) {
+    doc.addPage();
+    doc.setFillColor(...PDF.paper);
+    doc.rect(0, 0, pageW, pageH, 'F');
+    y = margin;
+  }
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10.5);
+  doc.setTextColor(...PDF.ink);
+  doc.text(
+    detailPrepared ? 'Planta del apartamento' : 'Planta referencial',
+    margin,
+    y
+  );
+  y += 5;
+
+  if (detailPrepared) {
+    const imgX = margin + (contentW - planImgW) / 2;
+    doc.addImage(detailPrepared.dataUrl, detailPrepared.format, imgX, y, planImgW, planImgH);
+    y += planImgH + 5;
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(7.5);
+    doc.setTextColor(...PDF.muted);
+    doc.text(
+      `Planta detallada · ${unit.tower} · ${unit.code} · Piso ${unit.floor}`,
+      pageW / 2,
+      y,
+      { align: 'center', maxWidth: contentW }
+    );
+    y += 8;
+  } else {
+    const planImgName = getFloorPlanImageFilename(unit.floor);
+    try {
+      const planData = await fetchImageAsBase64(assetUrl(planImgName));
+      const planPrepared = await preparePdfImageData(doc, planData);
+      const imgX = margin + (contentW - planImgW) / 2;
+      doc.addImage(planPrepared.dataUrl, planPrepared.format, imgX, y, planImgW, planImgH);
+
+      const ap = Number(unit.apartment);
+      const pos = UNIT_POSITIONS[ap];
+      if (pos) {
+        const pl = parseFloorPlanPercent(pos.left);
+        const pt = parseFloorPlanPercent(pos.top);
+        const pw = parseFloorPlanPercent(pos.width);
+        const ph = parseFloorPlanPercent(pos.height);
+        doc.setDrawColor(...PDF.accent);
+        doc.setLineWidth(0.55);
+        doc.rect(imgX + pl * planImgW, y + pt * planImgH, pw * planImgW, ph * planImgH, 'S');
+      }
+
+      y += planImgH + 5;
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(7.5);
+      doc.setTextColor(...PDF.muted);
+      doc.text(
+        `Piso ${unit.floor} · Apartamento ${unit.apartment} · Planta del piso (referencia). Coloca PNG/JPG en public/plantas-detalle/ para usar tu planta detallada.`,
+        pageW / 2,
+        y,
+        { align: 'center', maxWidth: contentW }
+      );
+      y += 8;
+    } catch {
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(7.5);
+      doc.setTextColor(...PDF.muted);
+      doc.text(
+        `No hay planta detallada en public/plantas-detalle/ ni planta de piso (${planImgName} en public/).`,
+        margin,
+        y,
+        { align: 'left', maxWidth: contentW }
+      );
+      y += 8;
+    }
+  }
 
   // ── Plan de inversión ───────────────────────────────────────────
   doc.setFont('helvetica', 'bold');
@@ -431,14 +548,130 @@ export async function generateReservationPDF(unit, salesPlan) {
   doc.save(`Cotizacion_KHAYA_${unit.code}_${dateStr}.pdf`);
 }
 
+/** Evita aceptar index.html (200) del dev server cuando falta el archivo en public/. */
+function blobLooksLikeImage(blob) {
+  const ct = (blob.type || '').toLowerCase();
+  if (ct.includes('html') || ct.includes('json')) return false;
+  if (ct.startsWith('image/')) return true;
+  if (ct === 'application/octet-stream' || ct === '') return true;
+  return false;
+}
+
+function magicBytesAreImage(u8) {
+  if (!u8 || u8.length < 4) return false;
+  if (u8[0] === 0x89 && u8[1] === 0x50 && u8[2] === 0x4e && u8[3] === 0x47) return true;
+  if (u8[0] === 0xff && u8[1] === 0xd8 && u8[2] === 0xff) return true;
+  if (u8[0] === 0x47 && u8[1] === 0x49 && u8[2] === 0x46) return true;
+  if (u8[0] === 0x52 && u8[1] === 0x49 && u8[2] === 0x46 && u8[3] === 0x46) return true;
+  return false;
+}
+
 async function fetchImageAsBase64(url) {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Failed to load image: ${url}`);
   const blob = await response.blob();
+  if (!blobLooksLikeImage(blob)) {
+    throw new Error(`Not an image response: ${url} (${blob.type || 'no type'})`);
+  }
+  const head = await blob.slice(0, 16).arrayBuffer();
+  const u8 = new Uint8Array(head);
+  const ct = (blob.type || '').toLowerCase();
+  if (!ct.startsWith('image/') && !magicBytesAreImage(u8)) {
+    throw new Error(`Not image bytes: ${url}`);
+  }
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onloadend = () => resolve(reader.result);
     reader.onerror = reject;
     reader.readAsDataURL(blob);
   });
+}
+
+/**
+ * WebP / AVIF / tipo UNKNOWN: jsPDF no los soporta bien en getImageProperties/addImage.
+ * Decodifica en el navegador y exporta PNG para el PDF.
+ */
+function dataUrlToPngViaCanvas(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('canvas 2d'));
+          return;
+        }
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      } catch (e) {
+        reject(e);
+      }
+    };
+    img.onerror = () => reject(new Error('decode image'));
+    img.src = dataUrl;
+  });
+}
+
+/**
+ * Devuelve data URL y formato válidos para doc.addImage (PNG o JPEG).
+ */
+async function preparePdfImageData(doc, dataUrl) {
+  let props;
+  try {
+    props = doc.getImageProperties(dataUrl);
+  } catch {
+    props = { fileType: 'UNKNOWN', width: 1, height: 1 };
+  }
+  const ft = String(props.fileType || '').toUpperCase();
+  if (ft === 'PNG' || ft === 'JPEG') {
+    return { dataUrl, format: ft === 'JPEG' ? 'JPEG' : 'PNG', props };
+  }
+  const pngUrl = await dataUrlToPngViaCanvas(dataUrl);
+  props = doc.getImageProperties(pngUrl);
+  return { dataUrl: pngUrl, format: 'PNG', props };
+}
+
+/** Confirma que el navegador puede decodificar la imagen (evita data URL basura). */
+function assertImageDataUrlDecodes(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      if (img.naturalWidth < 2 || img.naturalHeight < 2) {
+        reject(new Error('image too small'));
+        return;
+      }
+      resolve();
+    };
+    img.onerror = () => reject(new Error('decode'));
+    img.src = dataUrl;
+  });
+}
+
+/** Prueba varias rutas hasta que una sea una imagen real y decodificable. */
+async function fetchFirstImageFromCandidates(paths) {
+  for (const name of paths) {
+    try {
+      const data = await fetchImageAsBase64(assetUrl(name));
+      await assertImageDataUrlDecodes(data);
+      return { data, name };
+    } catch {
+      /* siguiente candidato */
+    }
+  }
+  return null;
+}
+
+function fitImageToMaxBox(imgWidthPx, imgHeightPx, maxWmm, maxHmm) {
+  const ar = imgWidthPx / imgHeightPx;
+  let imgW = maxWmm;
+  let imgH = imgW / ar;
+  if (imgH > maxHmm) {
+    imgH = maxHmm;
+    imgW = imgH * ar;
+  }
+  return { imgW, imgH };
 }
