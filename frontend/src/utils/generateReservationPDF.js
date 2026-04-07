@@ -68,15 +68,15 @@ function assetUrl(filename) {
 }
 
 /** Espacio reservado al pie de página para el pie de marca (mm). */
-const TABLE_MARGIN_BOTTOM = 28;
+const TABLE_MARGIN_BOTTOM = 24;
 
 const tableBase = {
   theme: 'plain',
   styles: {
     font: 'helvetica',
-    fontSize: 8.5,
+    fontSize: 8,
     textColor: PDF.ink,
-    cellPadding: { top: 2.8, right: 3, bottom: 2.8, left: 3 },
+    cellPadding: { top: 2, right: 2.8, bottom: 2, left: 2.8 },
     lineColor: PDF.line,
     lineWidth: PDF_LINE,
   },
@@ -84,8 +84,8 @@ const tableBase = {
     fillColor: PDF.cream,
     textColor: PDF.ink,
     fontStyle: 'bold',
-    fontSize: 8.5,
-    cellPadding: { top: 2.5, right: 3, bottom: 2.5, left: 3 },
+    fontSize: 8,
+    cellPadding: { top: 2, right: 2.8, bottom: 2, left: 2.8 },
     lineColor: PDF.line,
     lineWidth: PDF_LINE,
   },
@@ -156,7 +156,7 @@ export async function generateReservationPDF(unit, salesPlan) {
     const logoW = imgProps.width * ratio;
     const logoH = imgProps.height * ratio;
     doc.addImage(logoPrepared.dataUrl, logoPrepared.format, (pageW - logoW) / 2, y, logoW, logoH);
-    y += logoH + 5;
+    y += logoH + 4;
   } catch {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(22);
@@ -172,7 +172,7 @@ export async function generateReservationPDF(unit, salesPlan) {
   doc.setDrawColor(...PDF.line);
   doc.setLineWidth(PDF_LINE);
   doc.line(margin, y, pageW - margin, y);
-  y += 7;
+  y += 6;
 
   // ── Título documento ────────────────────────────────────────────
   doc.setFont('helvetica', 'bold');
@@ -185,7 +185,7 @@ export async function generateReservationPDF(unit, salesPlan) {
   doc.setFontSize(9.5);
   doc.setTextColor(...PDF.ink);
   doc.text(`Fecha ${formatDateLong()}`, pageW / 2, y, { align: 'center' });
-  y += 10;
+  y += 8.5;
 
   const aptM2 = salesPlan.aptArea != null ? salesPlan.aptArea : unit.area;
   const parkM2 = salesPlan.parkingM2 != null ? salesPlan.parkingM2 : unit.parkingArea;
@@ -199,7 +199,7 @@ export async function generateReservationPDF(unit, salesPlan) {
   doc.text('Resumen', margin, y);
   y += 4.5;
 
-  const resumenH = 23;
+  const resumenH = 21;
   doc.setFillColor(...PDF.cream);
   doc.setDrawColor(...PDF.line);
   doc.setLineWidth(PDF_LINE);
@@ -214,17 +214,17 @@ export async function generateReservationPDF(unit, salesPlan) {
     `${unit.bedrooms} hab.  ·  ${unit.bathrooms} baño${Number(unit.bathrooms) !== 1 ? 's' : ''}  ·  ${unit.view}  ·  Piso ${unit.floor}`,
     `Entrega estimada: ${unit.delivery}  ·  Tipo: ${unit.type}`,
   ];
-  let ry = y + 5.5;
+  let ry = y + 5;
   resumenLines.forEach((line) => {
     doc.text(line, margin + 3.5, ry);
-    ry += 4.2;
+    ry += 3.9;
   });
-  y += resumenH + 8;
+  y += resumenH + 6.5;
 
   // ── Planta: prioridad a `public/plantas-detalle/` (plano detallado); si no, planta piso + recuadro ──
   const contentW = pageW - margin * 2;
-  const maxPlanHDetail = 88;
-  const maxPlanHFallback = 72;
+  const maxPlanHDetail = 76;
+  const maxPlanHFallback = 60;
 
   const detailCandidates = getDetailPlanImageCandidates(unit);
   const detailLoaded = await fetchFirstImageFromCandidates(detailCandidates);
@@ -254,7 +254,7 @@ export async function generateReservationPDF(unit, salesPlan) {
     }
   }
 
-  const planSectionH = 4 + planImgH + 14;
+  const planSectionH = 4 + planImgH + 12;
   if (y + planSectionH > pageH - TABLE_MARGIN_BOTTOM) {
     doc.addPage();
     doc.setFillColor(...PDF.paper);
@@ -275,7 +275,7 @@ export async function generateReservationPDF(unit, salesPlan) {
   if (detailPrepared) {
     const imgX = margin + (contentW - planImgW) / 2;
     doc.addImage(detailPrepared.dataUrl, detailPrepared.format, imgX, y, planImgW, planImgH);
-    y += planImgH + 5;
+    y += planImgH + 4;
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(7.5);
     doc.setTextColor(...PDF.muted);
@@ -285,7 +285,7 @@ export async function generateReservationPDF(unit, salesPlan) {
       y,
       { align: 'center', maxWidth: contentW }
     );
-    y += 8;
+    y += 6.5;
   } else {
     const planImgName = getFloorPlanImageFilename(unit.floor);
     try {
@@ -306,7 +306,7 @@ export async function generateReservationPDF(unit, salesPlan) {
         doc.rect(imgX + pl * planImgW, y + pt * planImgH, pw * planImgW, ph * planImgH, 'S');
       }
 
-      y += planImgH + 5;
+      y += planImgH + 4;
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(7.5);
       doc.setTextColor(...PDF.muted);
@@ -316,7 +316,7 @@ export async function generateReservationPDF(unit, salesPlan) {
         y,
         { align: 'center', maxWidth: contentW }
       );
-      y += 8;
+      y += 6.5;
     } catch {
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(7.5);
@@ -327,7 +327,7 @@ export async function generateReservationPDF(unit, salesPlan) {
         y,
         { align: 'left', maxWidth: contentW }
       );
-      y += 8;
+      y += 6.5;
     }
   }
 
@@ -336,7 +336,7 @@ export async function generateReservationPDF(unit, salesPlan) {
   doc.setFontSize(10.5);
   doc.setTextColor(...PDF.ink);
   doc.text('Plan de inversión', margin, y);
-  y += 4;
+  y += 3.5;
 
   const prem = Number(salesPlan.parkingPremium);
   const hasPrem = Number.isFinite(prem) && Math.abs(prem) > 0.005;
@@ -381,7 +381,7 @@ export async function generateReservationPDF(unit, salesPlan) {
     },
   });
 
-  y = doc.lastAutoTable.finalY + 7;
+  y = doc.lastAutoTable.finalY + 5;
 
   // ── Detalle adicional (sin naranja en montos secundarios) ────────
   const extraRows = [
@@ -398,7 +398,7 @@ export async function generateReservationPDF(unit, salesPlan) {
   doc.setFontSize(10.5);
   doc.setTextColor(...PDF.ink);
   doc.text('Condiciones complementarias', margin, y);
-  y += 4;
+  y += 3.5;
 
   autoTable(doc, {
     ...tableBase,
@@ -417,7 +417,7 @@ export async function generateReservationPDF(unit, salesPlan) {
     },
   });
 
-  y = doc.lastAutoTable.finalY + 7;
+  y = doc.lastAutoTable.finalY + 5;
 
   // ── Calendario de pagos (cuotas en naranja) ─────────────────────
   const baseDate = salesPlan.reservaDate ? new Date(salesPlan.reservaDate) : new Date();
@@ -455,7 +455,7 @@ export async function generateReservationPDF(unit, salesPlan) {
   doc.setFontSize(10.5);
   doc.setTextColor(...PDF.ink);
   doc.text('Calendario de pagos', margin, y);
-  y += 4;
+  y += 3.5;
 
   autoTable(doc, {
     ...tableBase,
@@ -479,7 +479,7 @@ export async function generateReservationPDF(unit, salesPlan) {
     },
   });
 
-  y = doc.lastAutoTable.finalY + 7;
+  y = doc.lastAutoTable.finalY + 5;
 
   // ── Financiamiento bancario (referencia) ─────────────────────────
   const tasaPdf = Number.isFinite(Number(salesPlan.tasaAnualPct))
@@ -506,12 +506,12 @@ export async function generateReservationPDF(unit, salesPlan) {
   doc.setFontSize(10.5);
   doc.setTextColor(...PDF.ink);
   doc.text('Financiamiento bancario (referencia)', margin, y);
-  y += 3.5;
+  y += 3;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(...PDF.muted);
   doc.text('Estimaciones orientativas; condiciones sujetas a aprobación bancaria.', margin, y);
-  y += 4.5;
+  y += 4;
 
   autoTable(doc, {
     ...tableBase,
@@ -535,7 +535,7 @@ export async function generateReservationPDF(unit, salesPlan) {
     },
   });
 
-  y = doc.lastAutoTable.finalY + 6;
+  y = doc.lastAutoTable.finalY + 5;
 
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(7);
