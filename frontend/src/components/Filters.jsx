@@ -1,14 +1,17 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Slider } from './ui/slider';
 import { Filter, X } from 'lucide-react';
+import { CANONICAL_VIEWS } from '@/utils/unitFilters';
 
 export const Filters = ({ filters, onFilterChange, onClearFilters, units = [] }) => {
-  // Calculate filter options from units
+  const extraViews = [...new Set(units.map((u) => u.view))].filter(
+    (v) => v && !CANONICAL_VIEWS.includes(v)
+  );
+
   const filterOptions = {
     floors: [...new Set(units.map(u => u.floor))].sort((a, b) => b - a),
-    views: [...new Set(units.map(u => u.view))].sort(),
+    views: [...CANONICAL_VIEWS, ...extraViews.sort((a, b) => a.localeCompare(b))],
     statuses: [...new Set(units.map(u => u.status))].filter((s) => s !== 'Bloqueado').sort(),
-    types: [...new Set(units.map(u => u.type))].sort(),
     priceRange: {
       min: units.length > 0 ? Math.min(...units.map(u => u.price)) : 0,
       max: units.length > 0 ? Math.max(...units.map(u => u.price)) : 0
@@ -24,7 +27,7 @@ export const Filters = ({ filters, onFilterChange, onClearFilters, units = [] })
     bloqueados: units.filter(u => u.status === 'Bloqueado').length
   };
 
-  const hasActiveFilters = filters.view || filters.status || filters.type || 
+  const hasActiveFilters = filters.view || filters.status ||
     filters.minPrice || filters.maxPrice;
 
   const formatPrice = (price) => {
@@ -60,7 +63,7 @@ export const Filters = ({ filters, onFilterChange, onClearFilters, units = [] })
       </div>
 
       {/* Filter Controls */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {/* View Filter */}
         <div>
           <label className="text-[10px] tracking-[0.15em] uppercase text-gray-500 mb-2 block">
@@ -107,32 +110,6 @@ export const Filters = ({ filters, onFilterChange, onClearFilters, units = [] })
               {filterOptions.statuses.map((status) => (
               <SelectItem key={status} value={status} className="text-slate-900 hover:bg-black/5">
                   {status}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Type Filter */}
-        <div>
-          <label className="text-[10px] tracking-[0.15em] uppercase text-gray-500 mb-2 block">
-            Tipo
-          </label>
-          <Select 
-            value={filters.type || 'all'} 
-            onValueChange={(value) => onFilterChange('type', value === 'all' ? null : value)}
-          >
-            <SelectTrigger 
-              data-testid="filter-type"
-            className="bg-white border-black/10 text-slate-900 h-10"
-            >
-              <SelectValue placeholder="Todos" />
-            </SelectTrigger>
-          <SelectContent className="bg-white border-black/10">
-            <SelectItem value="all" className="text-slate-900 hover:bg-black/5">Todos</SelectItem>
-              {filterOptions.types.map((type) => (
-              <SelectItem key={type} value={type} className="text-slate-900 hover:bg-black/5">
-                  {type}
                 </SelectItem>
               ))}
             </SelectContent>

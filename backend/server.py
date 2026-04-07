@@ -11,10 +11,12 @@ import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
-from typing import List, Optional
+from typing import List, Optional, Tuple
 import uuid
+import re
 from datetime import datetime, timezone
 import openpyxl
+from openpyxl.utils import range_boundaries
 
 # Google Sheets write-back (gspread + google-auth, already in requirements.txt)
 GSPREAD_IMPORT_ERROR: Optional[str] = None
@@ -106,6 +108,7 @@ class Unit(BaseModel):
     bathrooms: int
     delivery: str
     rentability: float
+    ubicacion: str = ""
 
 class UnitUpdate(BaseModel):
     price: Optional[float] = None
@@ -206,6 +209,160 @@ async def download_xlsx() -> str:
 
     raise Exception(f"Failed to download: HTTP {response.status_code}")
 
+def _merge_bounds_for_cell(ws, row: int, col: int):
+    """Si (row,col) está en un rango combinado, devuelve (min_col, min_row, max_col, max_row)."""
+    for merged_range in ws.merged_cells.ranges:
+        min_col, min_row, max_col, max_row = range_boundaries(str(merged_range))
+        if min_row <= row <= max_row and min_col <= col <= max_col:
+            return min_col, min_row, max_col, max_row
+    return None
+
+
+def _row3_is_horizontal_banner_cell(ws, col: int) -> bool:
+    """
+    True si la celda (fila 3, col) forma parte de un merge horizontal en la fila 3
+    (varias columnas, una sola fila). En ese caso openpyxl repite el mismo texto en
+    todas las columnas y no hay vista por apartamento en la fila 3.
+    """
+    b = _merge_bounds_for_cell(ws, 3, col)
+    if not b:
+        return False
+    min_col, min_row, max_col, max_row = b
+    if min_row != max_row or min_row != 3:
+        return False
+    return (max_col - min_col + 1) > 1
+
+
+def _effective_cell_value(ws, row: int, col: int):
+    """
+    Valor legible de una celda. Si pertenece a un rango combinado (merge),
+    Excel/openpyxl solo guarda el valor en la esquina superior izquierda;
+    el resto llega como None y antes caíamos siempre en 'Vista Este'.
+    """
+    for merged_range in ws.merged_cells.ranges:
+        min_col, min_row, max_col, max_row = range_boundaries(str(merged_range))
+        if min_row <= row <= max_row and min_col <= col <= max_col:
+            return ws.cell(min_row, min_col).value
+    return ws.cell(row, col).value
+
+def _vista_raw_for_apartment_column(ws, col: int, primary_row: int, prefer_detail_row: bool):
+    """
+    Texto de vista por columna (B–K). primary_row es 3 (F/G) o 4 (E con fila «Apto»).
+    Si prefer_detail_row=True, la fila 3 es banner combinado: no usarla; prueba 4+.
+    Si primary_row=4, no se usa la fila 3 (etiquetas Apto), solo 4,5,6,2.
+    """
+    if prefer_detail_row:
+        for r in (4, 5, 6, 2):
+            raw = _effective_cell_value(ws, r, col)
+            if _looks_like_vista_text(raw):
+                return raw
+        return None
+    if primary_row == 4:
+        for r in (4, 5, 6, 2):
+            raw = _effective_cell_value(ws, r, col)
+            if _looks_like_vista_text(raw):
+                return raw
+        return None
+    raw = _effective_cell_value(ws, 3, col)
+    if _looks_like_vista_text(raw):
+        return raw
+    for r in (4, 5, 6, 2):
+        raw = _effective_cell_value(ws, r, col)
+        if _looks_like_vista_text(raw):
+            return raw
+    return raw
+
+
+def _looks_like_vista_text(raw) -> bool:
+    """Descarta precios numéricos cuando se busca vista en filas 4+ (p. ej. banner combinado en F/G)."""
+    if raw is None:
+        return False
+    if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+        return False
+    s = str(raw).strip()
+    if not s:
+        return False
+    low = s.replace(".", "").replace(",", "").replace(" ", "")
+    if low.isdigit():
+        return False
+    return True
+
+
+def _detect_vista_row(ws) -> int:
+    """
+    Torre E tiene una fila extra: fila 3 = «Apto 1»…«Apto 10», fila 4 = vistas.
+    En F/G la fila 3 es ya la de vistas. Si B3 empieza por «Apto», leer vistas en fila 4.
+    """
+    raw = _effective_cell_value(ws, 3, 2)
+    s = str(raw).strip().lower() if raw is not None else ""
+    if s.startswith("apto"):
+        return 4
+    return 3
+
+
+def _should_use_detail_row_for_views(ws) -> bool:
+    """
+    Usar filas 4+ para vistas por columna cuando la fila 3 no distingue apartamentos:
+    - merge horizontal B:K en fila 3, o
+    - el mismo texto no vacío en columnas 2–11 (típico de banner combinado).
+    """
+    if any(_row3_is_horizontal_banner_cell(ws, c) for c in range(2, 12)):
+        return True
+    r3 = []
+    for c in range(2, 12):
+        v = _effective_cell_value(ws, 3, c)
+        r3.append(str(v).strip() if v is not None else "")
+    non_empty = [x for x in r3 if x]
+    # Las 10 columnas con el mismo texto = título combinado, no vista por apartamento.
+    if len(non_empty) == 10 and len(set(non_empty)) == 1:
+        return True
+    return False
+
+def _parse_vista_ubicacion_row3_cell(raw) -> Tuple[str, str]:
+    """
+    Fila 3 de cada hoja: en cada columna de apartamento puede venir vista y ubicación.
+    - Dos líneas en la misma celda: 1ª = texto para vista (Este/Oeste/Esquina…), 2ª = ubicación.
+    - Una línea: si hay separador (· | / — -), izquierda = vista, derecha = ubicación.
+    """
+    if raw is None:
+        return "Vista Este", ""
+    text = str(raw).strip()
+    if not text:
+        return "Vista Este", ""
+    lines = [ln.strip() for ln in re.split(r"\r?\n+", text) if ln.strip()]
+    if len(lines) >= 2:
+        return lines[0], " · ".join(lines[1:])
+    for sep in (" · ", " | ", " / ", " — ", " – ", " - "):
+        if sep in text:
+            a, b = text.split(sep, 1)
+            a, b = a.strip(), b.strip()
+            if b:
+                return a, b
+    return text, ""
+
+def _normalize_view_label_and_meta(vista_line: str) -> Tuple[str, str, str]:
+    """
+    A partir del texto de vista (1ª línea, fila 3) devuelve:
+    - view: una de Vista Este | Vista Este Esquina | Vista Oeste | Vista Oeste Esquina
+    - viewDirection: Este | Oeste
+    - type: Central | Esquinero
+
+    Importante: en Python "este" in "oeste" es True (substring). Por eso se evalúa
+    Oeste antes que Este.
+    """
+    t = (vista_line or "").strip()
+    if not t:
+        return "Vista Este", "Este", "Central"
+    low = t.lower()
+    has_esq = "esquina" in low
+    if "oeste" in low:
+        view = "Vista Oeste Esquina" if has_esq else "Vista Oeste"
+        return view, "Oeste", "Esquinero" if has_esq else "Central"
+    if "este" in low:
+        view = "Vista Este Esquina" if has_esq else "Vista Este"
+        return view, "Este", "Esquinero" if has_esq else "Central"
+    return "Vista Este", "Este", "Central"
+
 def parse_xlsx_to_units(filepath: str) -> tuple:
     """Parse the downloaded XLSX file into units and towers."""
     wb_values = openpyxl.load_workbook(filepath, data_only=True)
@@ -221,12 +378,29 @@ def parse_xlsx_to_units(filepath: str) -> tuple:
         ws_col = wb_colors[sheet_name]
         tower_letter = sheet_name.replace('Torre ', '')
 
-        views_row = []
+        # Vistas por columna B–K: fila 3 en F/G; Torre E tiene fila 3 «Apto N» y vistas en fila 4.
+        detail_row = _should_use_detail_row_for_views(ws_val)
+        vista_row = _detect_vista_row(ws_val)
+        view_map: dict = {}
         for col in range(2, 12):
-            val = ws_val.cell(3, col).value
-            views_row.append(val.strip() if val else "Vista Este")
+            raw = _vista_raw_for_apartment_column(ws_val, col, vista_row, detail_row)
+            vista_part, ubicacion_str = _parse_vista_ubicacion_row3_cell(raw)
+            apt_num = col - 1
+            view_label, direction, unit_type = _normalize_view_label_and_meta(vista_part)
+            view_map[apt_num] = {
+                "view": view_label,
+                "viewDirection": direction,
+                "type": unit_type,
+                "ubicacion": ubicacion_str.strip(),
+            }
 
-        delivery_raw = ws_val.cell(3, 12).value
+        delivery_raw = _effective_cell_value(ws_val, vista_row, 12)
+        if delivery_raw is None or (isinstance(delivery_raw, str) and not str(delivery_raw).strip()):
+            delivery_raw = _effective_cell_value(ws_val, vista_row + 1, 12)
+        if delivery_raw is None or (isinstance(delivery_raw, str) and not str(delivery_raw).strip()):
+            delivery_raw = _effective_cell_value(ws_val, 3, 12)
+        if delivery_raw is None or (isinstance(delivery_raw, str) and not str(delivery_raw).strip()):
+            delivery_raw = _effective_cell_value(ws_val, 4, 12)
         delivery = "Mayo 2027"
         if delivery_raw:
             if isinstance(delivery_raw, datetime):
@@ -241,17 +415,6 @@ def parse_xlsx_to_units(filepath: str) -> tuple:
                     delivery = f"{month_names[int(parts[0])]} {parts[2]}"
                 except Exception:
                     pass
-
-        view_map = {}
-        for i, view_str in enumerate(views_row):
-            apt_num = i + 1
-            unit_type = 'Esquinero' if 'Esquina' in view_str else 'Central'
-            direction = 'Este' if 'Este' in view_str else ('Oeste' if 'Oeste' in view_str else 'Este')
-            view_map[apt_num] = {
-                'view': f"Vista {direction}",
-                'viewDirection': direction,
-                'type': unit_type
-            }
 
         max_floor = 0
         for row_idx in range(4, ws_val.max_row + 1):
@@ -278,7 +441,15 @@ def parse_xlsx_to_units(filepath: str) -> tuple:
                 rgb = get_cell_color_rgb(col_cell)
                 status = color_to_status(rgb)
 
-                info = view_map.get(apt, {'view': 'Vista Este', 'viewDirection': 'Este', 'type': 'Central'})
+                info = view_map.get(
+                    apt,
+                    {
+                        "view": "Vista Este",
+                        "viewDirection": "Este",
+                        "type": "Central",
+                        "ubicacion": "",
+                    },
+                )
                 is_esquinero = info['type'] == 'Esquinero'
                 base_area = 72.0 if is_esquinero else 67.0
                 parking_area = 14.3
@@ -294,6 +465,7 @@ def parse_xlsx_to_units(filepath: str) -> tuple:
                     "view": info['view'],
                     "viewDirection": info['viewDirection'],
                     "type": info['type'],
+                    "ubicacion": info.get('ubicacion', ''),
                     "status": status,
                     "area": base_area,
                     "parkingArea": parking_area,

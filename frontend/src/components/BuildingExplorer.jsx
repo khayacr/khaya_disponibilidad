@@ -7,6 +7,7 @@ import UnitModal from './UnitModal';
 import { BrandLogo } from './BrandLogo';
 import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { matchesUnitFilters } from '@/utils/unitFilters';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const API_BASE = API_URL || '';
@@ -66,7 +67,6 @@ export const BuildingExplorer = ({ onContactClick }) => {
   const [filters, setFilters] = useState({
     view: null,
     status: null,
-    type: null,
     minPrice: null,
     maxPrice: null
   });
@@ -170,7 +170,14 @@ export const BuildingExplorer = ({ onContactClick }) => {
 
   const handleTowerSelect = (tower) => {
     setSelectedTower(tower);
-    setSelectedFloor(14); // Reset to top floor
+    setSelectedFloor(14);
+    // Evita vista/precio de otra torre que no exista en la nueva o deje el Select incoherente
+    setFilters({
+      view: null,
+      status: null,
+      minPrice: null,
+      maxPrice: null,
+    });
   };
 
   const handleFloorSelect = (floor) => {
@@ -190,7 +197,6 @@ export const BuildingExplorer = ({ onContactClick }) => {
     setFilters({
       view: null,
       status: null,
-      type: null,
       minPrice: null,
       maxPrice: null
     });
@@ -256,12 +262,14 @@ export const BuildingExplorer = ({ onContactClick }) => {
     return d.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   };
 
-  // Get units for selected floor
-  const floorUnits = units.filter(u => u.floor === selectedFloor);
+  const floorUnits = units.filter((u) => u.floor === selectedFloor);
   const floors = Array.from({ length: 14 }, (_, i) => 14 - i);
+  const unitsMatchingFilters = units.filter((u) => matchesUnitFilters(u, filters));
   const unitsByFloor = floors.map((f) => ({
     floor: f,
-    units: units.filter((u) => u.floor === f).sort((a, b) => a.apartment - b.apartment),
+    units: unitsMatchingFilters
+      .filter((u) => u.floor === f)
+      .sort((a, b) => a.apartment - b.apartment),
   }));
 
   return (
@@ -409,7 +417,7 @@ export const BuildingExplorer = ({ onContactClick }) => {
                                 type="button"
                                 disabled={u.status === 'Vendido'}
                                 onClick={() => handleUnitClick(u)}
-                                className={`min-h-[76px] py-1.5 rounded border border-black/15 leading-tight flex flex-col items-center justify-center gap-1 px-0.5 ${
+                                className={`min-h-[90px] py-1.5 rounded border border-black/15 leading-tight flex flex-col items-center justify-center gap-0.5 px-0.5 ${
                                   STATUS_BG[u.status] || 'bg-emerald-500'
                                 } ${
                                   u.status === 'Vendido'
@@ -417,11 +425,21 @@ export const BuildingExplorer = ({ onContactClick }) => {
                                     : 'hover:brightness-95'
                                 }`}
                                 title={
-                                  `${u.code} / (${mapUnitLegacyNumber(u)}) · ${formatMapPriceFull(u.price)} · ${u.status}`
+                                  `${u.code} / (${mapUnitLegacyNumber(u)}) · ${u.view || '—'}${
+                                    u.ubicacion ? ` · ${u.ubicacion}` : ''
+                                  } · ${formatMapPriceFull(u.price)} · ${u.status}`
                                 }
                               >
                                 <span className="text-[12px] font-normal text-center text-black whitespace-normal leading-snug px-0.5 [text-shadow:0_0_2px_rgba(255,255,255,0.85)]">
                                   {u.code} / ({mapUnitLegacyNumber(u)})
+                                </span>
+                                <span className="text-[10px] font-medium text-center text-black/90 [text-shadow:0_0_2px_rgba(255,255,255,0.85)] leading-tight line-clamp-2">
+                                  {u.view || '—'}
+                                  {u.ubicacion ? (
+                                    <span className="block text-[9px] font-normal opacity-95 mt-0.5">
+                                      {u.ubicacion}
+                                    </span>
+                                  ) : null}
                                 </span>
                                 <span className="text-[15px] font-bold tabular-nums tracking-tight text-black [text-shadow:0_0_2px_rgba(255,255,255,0.9)]">
                                   {formatMapPriceFull(u.price)}

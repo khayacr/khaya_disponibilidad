@@ -75,7 +75,8 @@ export const generateUnits = () => {
         bedrooms: isEsquinero ? 2 : 2,
         bathrooms: isEsquinero ? 2 : 1,
         delivery: 'Diciembre 2027',
-        rentability: 8
+        rentability: 8,
+        ubicacion: '',
       });
     }
   }
@@ -102,7 +103,6 @@ export const getFilters = () => {
     floors: [...new Set(units.map(u => u.floor))].sort((a, b) => b - a),
     views: [...new Set(units.map(u => u.view))],
     statuses: [...new Set(units.map(u => u.status))],
-    types: [...new Set(units.map(u => u.type))],
     priceRange: {
       min: Math.min(...units.map(u => u.price)),
       max: Math.max(...units.map(u => u.price))
@@ -116,7 +116,6 @@ export const filterUnits = (filters) => {
     if (filters.floor && unit.floor !== filters.floor) return false;
     if (filters.view && unit.view !== filters.view) return false;
     if (filters.status && unit.status !== filters.status) return false;
-    if (filters.type && unit.type !== filters.type) return false;
     if (filters.minPrice && unit.price < filters.minPrice) return false;
     if (filters.maxPrice && unit.price > filters.maxPrice) return false;
     return true;

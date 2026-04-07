@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Maximize2 } from 'lucide-react';
+import { matchesUnitFilters } from '@/utils/unitFilters';
 
 const FLOOR_PLAN_TYPICAL = `${process.env.PUBLIC_URL || ''}/planta-tipo.png`;
 const FLOOR_PLAN_GROUND = `${process.env.PUBLIC_URL || ''}/planta-baja.png`;
@@ -40,15 +41,7 @@ export const FloorPlan = ({ selectedFloor, selectedTower, onUnitClick, filters, 
   
   const floorPlanImage = selectedFloor === 1 ? FLOOR_PLAN_GROUND : FLOOR_PLAN_TYPICAL;
 
-  // Apply filters
-  const filteredUnits = units.filter(unit => {
-    if (filters?.view && unit.view !== filters.view) return false;
-    if (filters?.status && unit.status !== filters.status) return false;
-    if (filters?.type && unit.type !== filters.type) return false;
-    if (filters?.minPrice && unit.price < filters.minPrice) return false;
-    if (filters?.maxPrice && unit.price > filters.maxPrice) return false;
-    return true;
-  });
+  const filteredUnits = units.filter((unit) => matchesUnitFilters(unit, filters));
 
   const filteredIds = new Set(filteredUnits.map(u => u.id));
 
@@ -134,7 +127,7 @@ export const FloorPlan = ({ selectedFloor, selectedTower, onUnitClick, filters, 
 
               {/* Vendido X overlay */}
               {isVendido && (
-                <div className="absolute inset-0 flex items-center justify-center">
+                <div className="absolute inset-0 z-[4] flex items-center justify-center pointer-events-none">
                   <span className="text-black/50 text-4xl font-bold">✕</span>
                 </div>
               )}
@@ -155,7 +148,8 @@ export const FloorPlan = ({ selectedFloor, selectedTower, onUnitClick, filters, 
                     {formatPrice(unit.price)}
                   </p>
                   <p className="text-xs text-gray-600 mt-1">
-                    {unit.view} · {unit.area}m²
+                    {unit.view}
+                    {unit.ubicacion ? ` · ${unit.ubicacion}` : ''} · {unit.area}m²
                   </p>
                   <div className="flex items-center gap-2 mt-2">
                     <span 
@@ -173,15 +167,23 @@ export const FloorPlan = ({ selectedFloor, selectedTower, onUnitClick, filters, 
                 </div>
               )}
 
-              {/* Apartment number badge */}
-              <div 
-                className={`
-                  absolute bottom-1 right-1 w-6 h-6 flex items-center justify-center
-                  text-xs font-medium rounded-sm transition-all duration-300
-                  ${isHovered ? 'bg-slate-900 text-white' : 'bg-white/80 text-slate-900'}
-                `}
-              >
-                {unit.apartment}
+              {/* Vista + número: vista a la izquierda, centrada en altura con el cuadro del apto */}
+              <div className="absolute bottom-1 left-1 right-1 z-[5] flex flex-row items-center justify-end gap-[10px] pointer-events-none">
+                <span
+                  className="text-[7px] sm:text-[8px] leading-[1.1] text-right font-medium text-slate-900 line-clamp-2 min-w-0 flex-1 drop-shadow-[0_0_3px_rgba(255,255,255,0.95)]"
+                  title={unit.view ? `${unit.view}${unit.ubicacion ? ` · ${unit.ubicacion}` : ''}` : ''}
+                >
+                  {unit.view || '—'}
+                </span>
+                <div
+                  className={`
+                    w-6 h-6 flex flex-shrink-0 items-center justify-center
+                    text-xs font-medium rounded-sm transition-all duration-300
+                    ${isHovered ? 'bg-slate-900 text-white' : 'bg-white/80 text-slate-900'}
+                  `}
+                >
+                  {unit.apartment}
+                </div>
               </div>
             </div>
           );

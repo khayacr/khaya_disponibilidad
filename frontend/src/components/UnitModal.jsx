@@ -252,6 +252,7 @@ export const UnitModal = ({ unit, isOpen, onClose, onUpdateUnit }) => {
               </DialogTitle>
               <DialogDescription className="text-sm text-slate-600 mt-1">
                 {aptArea}m² apartamento + {selectedParkingM2}m² parqueo ({totalBuiltM2} m² total) · {unit.view}
+                {unit.ubicacion ? ` · ${unit.ubicacion}` : ''}
               </DialogDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -325,7 +326,8 @@ export const UnitModal = ({ unit, isOpen, onClose, onUpdateUnit }) => {
           <div className="bg-gradient-to-r from-[#f97316] to-[#ea580c] p-4 mb-6">
             <p className="text-white font-medium text-sm">
               {unit.tower} · Apto {unit.code} · {aptArea}m² + {selectedParkingM2}m² parqueo · {totalBuiltM2} m² total
-              {' '}(Piso {unit.floor} · {unit.view})
+              {' '}(Piso {unit.floor} · {unit.view}
+              {unit.ubicacion ? ` · ${unit.ubicacion}` : ''})
             </p>
           </div>
 

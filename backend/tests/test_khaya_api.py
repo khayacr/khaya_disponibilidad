@@ -103,7 +103,7 @@ class TestUnits:
         data = response.json()
         
         required_fields = ["id", "code", "tower", "floor", "apartment", "price", 
-                          "view", "viewDirection", "type", "status", "area", 
+                          "view", "viewDirection", "type", "ubicacion", "status", "area", 
                           "parkingArea", "totalArea", "bedrooms", "bathrooms", 
                           "delivery", "rentability"]
         
