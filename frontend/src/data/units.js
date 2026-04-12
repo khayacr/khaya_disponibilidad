@@ -55,8 +55,7 @@ export const generateUnits = () => {
       const statusIndex = Math.floor(seededRandom(seed) * STATUSES.length);
       const status = STATUSES[statusIndex];
       
-      // Calculate areas based on type
-      const baseArea = isEsquinero ? 72 : 67;
+      const baseArea = 67;
       const parkingArea = 14.3;
       
       units.push({

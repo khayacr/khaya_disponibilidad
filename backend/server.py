@@ -451,7 +451,7 @@ def parse_xlsx_to_units(filepath: str) -> tuple:
                     },
                 )
                 is_esquinero = info['type'] == 'Esquinero'
-                base_area = 72.0 if is_esquinero else 67.0
+                base_area = 67.0
                 parking_area = 14.3
                 unit_id = f"{tower_letter}-{floor}-{apt}"
 
