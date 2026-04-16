@@ -1,4 +1,6 @@
 {
+  "private": true,
+  "license": "UNLICENSED",
   "dependencies": {
     "svg2pdf.js": "^2.7.0"
   }
