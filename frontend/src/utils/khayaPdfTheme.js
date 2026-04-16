@@ -1,25 +1,25 @@
 /**
- * Manual de marca KHAYA — tokens para PDF (cotización).
- * Tipografía: jsPDF usa Helvetica (sans geométrica, sustituto de Sharp Sans) y Times (serif, cierre inspiracional).
+ * Tokens PDF — Cotización (Ruta Uno / marca).
+ * Tipografías en PDF: `embedKhayaPdfFonts` registra Sharp Sans No1 Book + Semibold desde `public/fonts/`.
+ * Sin eso, svg2pdf solo usa Times/Helvetica.
  */
 
 export const PDF = {
-  /** Texto principal y títulos de sección */
   ink: [34, 34, 34],
-  /** #222222 */
   inkHex: '#222222',
-  /** Naranja — solo montos clave */
-  accent: [224, 132, 51],
-  /** #e08433 */
-  cream: [250, 245, 241],
-  /** #faf5f1 */
-  line: [208, 208, 208],
-  /** #d0d0d0 bordes finos */
-  grayBlock: [208, 208, 208],
+  /** Montos / acentos */
+  accent: [238, 126, 12],
+  accentHex: '#ee7e0c',
+  /** Relleno cajas naranjas (cuadros) */
+  cream: [250, 244, 240],
+  creamHex: '#faf4f0',
+  line: [238, 126, 12],
   white: [255, 255, 255],
-  /** Fondo página — casi blanco cálido */
-  paper: [252, 251, 249],
+  paper: [255, 255, 255],
   muted: [100, 100, 100],
+  /** Pie de página */
+  footerBg: [172, 142, 120],
+  footerHex: '#ac8e78',
 };
 
 export const PDF_COPY = {
@@ -29,5 +29,8 @@ export const PDF_COPY = {
     'Este documento es una cotización informativa y no constituye un contrato de compra-venta.',
 };
 
-/** Grosor de trazo para “lujo silencioso” (mm) */
-export const PDF_LINE = 0.08;
+/** ~20px a mm (96 CSS px → mm) */
+export const BOX_RADIUS_MM = (20 * 25.4) / 96;
+
+/** Grosor borde cajas (mm) */
+export const PDF_LINE = 0.35;

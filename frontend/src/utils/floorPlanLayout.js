@@ -51,24 +51,25 @@ const DETALLE_EXT = ['png', 'jpg', 'jpeg'];
 
 /**
  * Piso 1: grupos que comparten `planta_baja_{nums}.png` (mismos números ordenados).
- * Si un apto entra en varios grupos, se prueba primero el grupo más largo (ej. 7 → 3-5-7 antes que 4-7).
+ * Modelos actualizados (assets `planta_baja_*` en `public/plantas-detalle/`).
+ * Si un apto entra en varios grupos, se prueba primero el grupo más largo.
  */
 export const PLANTA_BAJA_SHARED_LAYOUTS = [
-  [1, 8],
-  [2, 9],
   [3, 5, 7],
-  [4, 7],
+  [2, 8],
+  [1, 9],
+  [4, 6],
 ];
 
 /**
  * Pisos 2–14: grupos que comparten `planta_tipo_{nums}.png`.
- * Misma regla de prioridad por longitud de grupo (ej. 8 → 4-7-8 antes que 1-8).
+ * Misma regla de prioridad por longitud de grupo.
  */
 export const PLANTA_TIPO_SHARED_LAYOUTS = [
-  [2, 9, 10],
-  [1, 8],
-  [3, 5, 6],
-  [4, 7, 8],
+  [2, 8, 10],
+  [3, 5, 7],
+  [1, 9],
+  [4, 6],
 ];
 
 function groupFilenameKey(group) {

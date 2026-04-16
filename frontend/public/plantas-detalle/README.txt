@@ -1,14 +1,19 @@
-Nombres para la cotización PDF (prioridad alta):
+Nombres para la cotización PDF (prioridad alta), alineados con `PLANTA_*_SHARED_LAYOUTS` en `floorPlanLayout.js`:
 
-Planta baja (piso 1):
-  - Por grupos (ver PLANTA_BAJA_SHARED_LAYOUTS en floorPlanLayout.js):
-    planta_baja_1-8.png, planta_baja_2-9.png, planta_baja_3-5-7.png, planta_baja_4-7.png
-  - Fallback: planta_baja_1-{apto}.png, planta_baja_apto_{n}.png
+Planta baja (piso 1), por modelo compartido:
+  planta_baja_3-5-7.png
+  planta_baja_2-8.png
+  planta_baja_1-9.png
+  planta_baja_4-6.png
 
-Planta tipo (pisos 2–14):
-  - Por grupos (PLANTA_TIPO_SHARED_LAYOUTS): planta_tipo_2-9-10.png, planta_tipo_1-8.png, etc.
-  - Fallback: planta_tipo_apto_{n}.png
+Planta tipo (pisos 2–14), por modelo compartido:
+  planta_tipo_2-8-10.png
+  planta_tipo_3-5-7.png
+  planta_tipo_1-9.png
+  planta_tipo_4-6.png
 
-Si un apartamento encaja en varios grupos, se prueba primero el grupo con más apartamentos (más específico).
+Fallback (si no hay grupo): planta_baja_{piso}-{apto}.png, planta_baja_apto_{n}.png, planta_tipo_apto_{n}.png, y rutas por código de unidad.
 
-Si el PDF seguía mostrando la planta general: el dev server devolvía index.html en lugar del PNG; ya se valida que la respuesta sea imagen real.
+Si un apartamento encaja en varios grupos, se prueba primero el grupo con más unidades (más específico).
+
+El PDF valida `Content-Type: image/*` al cargar el PNG (evita index.html del dev server).
