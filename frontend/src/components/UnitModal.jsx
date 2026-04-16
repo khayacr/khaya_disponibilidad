@@ -322,9 +322,9 @@ export const UnitModal = ({ unit, isOpen, onClose, onUpdateUnit }) => {
 
         {/* Content */}
         <div className="p-6">
-          {/* Unit Info Header - Orange bar like reference */}
-          <div className="bg-gradient-to-r from-[#f97316] to-[#ea580c] p-4 mb-6">
-            <p className="text-white font-medium text-sm">
+          {/* Unit Info Header */}
+          <div className="bg-white border border-black/10 p-4 mb-6">
+            <p className="text-slate-900 font-medium text-sm">
               {unit.tower} · Apto {unit.code} · {aptArea}m² + {selectedParkingM2}m² parqueo · {totalBuiltM2} m² total
               {' '}(Piso {unit.floor} · {unit.view}
               {unit.ubicacion ? ` · ${unit.ubicacion}` : ''})

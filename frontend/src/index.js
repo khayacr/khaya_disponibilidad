@@ -9,3 +9,15 @@ root.render(
     <App />
   </React.StrictMode>,
 );
+
+if (
+  process.env.NODE_ENV === "production" &&
+  typeof window !== "undefined" &&
+  "serviceWorker" in navigator
+) {
+  window.addEventListener("load", () => {
+    const base = process.env.PUBLIC_URL || "";
+    const swUrl = `${base.replace(/\/$/, "")}/sw.js`;
+    navigator.serviceWorker.register(swUrl).catch(() => {});
+  });
+}
