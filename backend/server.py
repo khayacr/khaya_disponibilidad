@@ -471,7 +471,7 @@ def parse_xlsx_to_units(filepath: str) -> tuple:
                     "parkingArea": parking_area,
                     "totalArea": base_area + parking_area,
                     "bedrooms": 2,
-                    "bathrooms": 2 if is_esquinero else 1,
+                    "bathrooms": 2,
                     "delivery": delivery,
                     "rentability": 8.0
                 })

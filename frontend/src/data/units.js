@@ -72,7 +72,7 @@ export const generateUnits = () => {
         parkingArea,
         totalArea: baseArea + parkingArea,
         bedrooms: isEsquinero ? 2 : 2,
-        bathrooms: isEsquinero ? 2 : 1,
+        bathrooms: 2,
         delivery: 'Diciembre 2027',
         rentability: 8,
         ubicacion: '',
