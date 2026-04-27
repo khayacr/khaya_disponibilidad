@@ -496,7 +496,7 @@ export const UnitModal = ({ unit, isOpen, onClose, onUpdateUnit }) => {
                     onChange={(e) => setMesesPrima(parseInt(e.target.value) || 1)}
                     className="h-8 bg-white border border-black/10 text-slate-900 font-medium px-2"
                   >
-                    {[3, 6, 7, 8, 10, 12, 13, 14, 18, 24].map((n) => (
+                    {Array.from({ length: 24 }, (_, i) => i + 1).map((n) => (
                       <option key={n} value={n}>
                         {n}
                       </option>
