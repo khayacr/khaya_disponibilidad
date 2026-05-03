@@ -13,6 +13,11 @@ import {
   injectCotizacionPage2,
 } from './svgCotizacionInject';
 import { applyKhayaSvgFontFamilies, embedKhayaPdfFonts } from './pdfFonts';
+import {
+  addCalendarDays,
+  addCalendarMonths,
+  toLocalCalendarDate,
+} from './paymentCalendar';
 
 /**
  * Cotización: plantillas SVG con textos editables; los datos se inyectan en los nodos <text>
@@ -175,24 +180,12 @@ function formatM2(value) {
 
 function formatPaymentDateSlash(value) {
   if (!value) return '';
-  const d = value instanceof Date ? value : new Date(value);
+  const d = toLocalCalendarDate(value instanceof Date ? value : new Date(value));
   if (Number.isNaN(d.getTime())) return '';
   const dd = String(d.getDate()).padStart(2, '0');
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const yyyy = String(d.getFullYear());
   return `${dd}/${mm}/${yyyy}`;
-}
-
-function addDays(date, days) {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return d;
-}
-
-function addMonths(date, months) {
-  const d = new Date(date);
-  d.setMonth(d.getMonth() + months);
-  return d;
 }
 
 export async function generateReservationPDF(unit, salesPlan) {
@@ -220,7 +213,9 @@ export async function generateReservationPDF(unit, salesPlan) {
     detailPlanDataUrl,
   };
 
-  const baseDate = salesPlan.reservaDate ? new Date(salesPlan.reservaDate) : new Date();
+  const baseDate = toLocalCalendarDate(
+    salesPlan.reservaDate ? new Date(salesPlan.reservaDate) : new Date(),
+  );
   const cuotas = Math.max(1, Math.floor(Number(salesPlan.mesesPrima || 1)));
   const primaTotal = Number(salesPlan.primaTotal || 0);
   const reserva = Number(salesPlan.reserva || 0);
@@ -231,15 +226,15 @@ export async function generateReservationPDF(unit, salesPlan) {
       ? Number(salesPlan.cuotaMensual || 0)
       : Math.round(((remaining / cuotas) || 0) * 100) / 100;
   const lastCuota = Math.round((remaining - cuotaBase * (cuotas - 1)) * 100) / 100;
-  const opcDate = addDays(baseDate, 15);
-  const cuotaStartDate = addMonths(baseDate, 1);
+  const opcDate = addCalendarDays(baseDate, 15);
+  const cuotaStartDate = addCalendarMonths(baseDate, 1);
 
   const payMeta = [];
   payMeta.push({ label: 'RESERVA', amount: reserva, date: baseDate, accent: false });
   payMeta.push({ label: 'OPCIÓN DE COMPRA', amount: opc, date: opcDate, accent: false });
   for (let i = 1; i <= cuotas; i += 1) {
     const amount = i === cuotas ? Math.max(0, lastCuota) : cuotaBase;
-    const date = addMonths(cuotaStartDate, i - 1);
+    const date = addCalendarMonths(cuotaStartDate, i - 1);
     payMeta.push({
       label: `CUOTA ${String(i).padStart(2, '0')}/${String(cuotas).padStart(2, '0')}`,
       amount,

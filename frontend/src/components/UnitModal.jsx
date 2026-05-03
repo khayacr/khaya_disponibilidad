@@ -31,6 +31,11 @@ import {
   PARKING_LARGE_PREMIUM_USD,
   isSheetParkingLarge,
 } from '../utils/parkingPricing';
+import {
+  addCalendarDays,
+  addCalendarMonths,
+  toLocalCalendarDate,
+} from '@/utils/paymentCalendar';
 
 const STATUS_OPTIONS = [
   { value: 'Disponible', label: 'Disponible', icon: CheckCircle, color: 'text-[#10b981] bg-[#10b981]/20 border-[#10b981]/50' },
@@ -53,7 +58,7 @@ export const UnitModal = ({ unit, isOpen, onClose, onUpdateUnit }) => {
   const [mesesPrima, setMesesPrima] = useState(13);
   const [cuotaMensual, setCuotaMensual] = useState(0);
   const [gastosCierrePct, setGastosCierrePct] = useState(2);
-  const [reservaDate, setReservaDate] = useState(() => new Date());
+  const [reservaDate, setReservaDate] = useState(() => toLocalCalendarDate(new Date()));
   const [tasaAnualPct, setTasaAnualPct] = useState(DEFAULT_TASA_ANUAL);
   const [cuotaMantenimiento, setCuotaMantenimiento] = useState(DEFAULT_CUOTA_MANTENIMIENTO);
   const [parkingSize, setParkingSize] = useState('small'); // 'small' 14.3m² | 'large' 28.6m²
@@ -64,18 +69,6 @@ export const UnitModal = ({ unit, isOpen, onClose, onUpdateUnit }) => {
   const price = Math.max(0, basePrice + parkingPremium);
   const selectedParkingM2 = parkingM2ForSize(parkingSize);
   const totalBuiltM2 = totalAreaM2(aptArea, parkingSize);
-
-  const addDays = (date, days) => {
-    const d = new Date(date);
-    d.setDate(d.getDate() + days);
-    return d;
-  };
-
-  const addMonths = (date, months) => {
-    const d = new Date(date);
-    d.setMonth(d.getMonth() + months);
-    return d;
-  };
 
   const setPrimaFromPct = (pct) => {
     const safePct = Number.isFinite(pct) ? pct : 0;
@@ -115,7 +108,7 @@ export const UnitModal = ({ unit, isOpen, onClose, onUpdateUnit }) => {
     setMesesPrima(13);
     setCuotaMensual(0);
     setGastosCierrePct(2);
-    setReservaDate(new Date());
+    setReservaDate(toLocalCalendarDate(new Date()));
     setTasaAnualPct(DEFAULT_TASA_ANUAL);
     setCuotaMantenimiento(DEFAULT_CUOTA_MANTENIMIENTO);
     setParkingSize(isSheetParkingLarge(unit.parkingArea) ? 'large' : 'small');
@@ -149,10 +142,15 @@ export const UnitModal = ({ unit, isOpen, onClose, onUpdateUnit }) => {
 
   const formatShortDate = (value) => {
     if (!value) return '';
-    const d = value instanceof Date ? value : new Date(value);
+    const d = toLocalCalendarDate(value instanceof Date ? value : new Date(value));
     if (Number.isNaN(d.getTime())) return '';
     return new Intl.DateTimeFormat('en-US').format(d);
   };
+
+  const reservaDateLocalYmd = (() => {
+    const d = toLocalCalendarDate(reservaDate);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  })();
 
   const primaSchedule = (() => {
     const safePrimaTotal = Number.isFinite(primaTotal) ? primaTotal : 0;
@@ -164,12 +162,13 @@ export const UnitModal = ({ unit, isOpen, onClose, onUpdateUnit }) => {
     const base = Math.round((cuotaBase || 0) * 100) / 100;
     const last = Math.round((remaining - base * (cuotas - 1)) * 100) / 100;
 
-    const opcDate = addDays(reservaDate, 15);
-    const cuotaStartDate = addMonths(reservaDate, 1);
+    const anchor = toLocalCalendarDate(reservaDate);
+    const opcDate = addCalendarDays(anchor, 15);
+    const cuotaStartDate = addCalendarMonths(anchor, 1);
 
     const rows = [
       { label: 'PRIMA', amount: safePrimaTotal, date: null, kind: 'total' },
-      { label: 'RESERVA', amount: safeReserva, date: reservaDate, kind: 'fixed' },
+      { label: 'RESERVA', amount: safeReserva, date: anchor, kind: 'fixed' },
       { label: 'OPC', amount: safeOpc, date: opcDate, kind: 'fixed' },
     ];
 
@@ -178,7 +177,7 @@ export const UnitModal = ({ unit, isOpen, onClose, onUpdateUnit }) => {
       rows.push({
         label: `CUOTA ${String(i).padStart(2, '0')}`,
         amount,
-        date: addMonths(cuotaStartDate, i - 1),
+        date: addCalendarMonths(cuotaStartDate, i - 1),
         kind: 'cuota',
       });
     }
@@ -448,8 +447,13 @@ export const UnitModal = ({ unit, isOpen, onClose, onUpdateUnit }) => {
                 <div className="w-40 p-4 bg-white text-right">
                   <Input
                     type="date"
-                    value={new Date(reservaDate).toISOString().slice(0, 10)}
-                    onChange={(e) => setReservaDate(new Date(`${e.target.value}T00:00:00`))}
+                    value={reservaDateLocalYmd}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (!v) return;
+                      const [y, mo, da] = v.split('-').map(Number);
+                      setReservaDate(toLocalCalendarDate(new Date(y, mo - 1, da)));
+                    }}
                     className="w-full h-8 bg-white border border-black/10 text-right text-slate-900 font-medium pr-2"
                   />
                 </div>
