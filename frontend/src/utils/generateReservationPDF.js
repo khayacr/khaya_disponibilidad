@@ -16,6 +16,7 @@ import { applyKhayaSvgFontFamilies, embedKhayaPdfFonts } from './pdfFonts';
 import {
   addCalendarDays,
   addCalendarMonths,
+  formatDateDdMmYyyy,
   toLocalCalendarDate,
 } from './paymentCalendar';
 
@@ -178,16 +179,6 @@ function formatM2(value) {
   return n.toLocaleString('en-US', { maximumFractionDigits: 1, minimumFractionDigits: 0 });
 }
 
-function formatPaymentDateSlash(value) {
-  if (!value) return '';
-  const d = toLocalCalendarDate(value instanceof Date ? value : new Date(value));
-  if (Number.isNaN(d.getTime())) return '';
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const yyyy = String(d.getFullYear());
-  return `${dd}/${mm}/${yyyy}`;
-}
-
 export async function generateReservationPDF(unit, salesPlan) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
   const pageW = doc.internal.pageSize.getWidth();
@@ -208,7 +199,7 @@ export async function generateReservationPDF(unit, salesPlan) {
     formatPrice,
     formatDateLong,
     formatM2,
-    formatPaymentDateSlash,
+    formatPaymentDateSlash: formatDateDdMmYyyy,
     primaPctLabel,
     detailPlanDataUrl,
   };

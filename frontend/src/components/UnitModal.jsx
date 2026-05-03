@@ -34,6 +34,7 @@ import {
 import {
   addCalendarDays,
   addCalendarMonths,
+  formatDateDdMmYyyy,
   toLocalCalendarDate,
 } from '@/utils/paymentCalendar';
 
@@ -138,13 +139,6 @@ export const UnitModal = ({ unit, isOpen, onClose, onUpdateUnit }) => {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }).format(value);
-  };
-
-  const formatShortDate = (value) => {
-    if (!value) return '';
-    const d = toLocalCalendarDate(value instanceof Date ? value : new Date(value));
-    if (Number.isNaN(d.getTime())) return '';
-    return new Intl.DateTimeFormat('en-US').format(d);
   };
 
   const reservaDateLocalYmd = (() => {
@@ -648,7 +642,7 @@ export const UnitModal = ({ unit, isOpen, onClose, onUpdateUnit }) => {
                     {formatPrice(row.amount)}
                   </div>
                   <div className="px-4 py-2 text-sm text-slate-600 text-right tabular-nums">
-                    {row.date ? formatShortDate(row.date) : ''}
+                    {row.date ? formatDateDdMmYyyy(row.date) : ''}
                   </div>
                 </div>
               ))}
